@@ -2621,13 +2621,15 @@ const getHTMLContent = (title) => `
                     return;
                 }
                 
-                // 验证是否为一级域名（只能有一个点），pp.ua及DigitalPlat特定域名除外（允许二级域名）
+                // 验证是否为一级域名（只能有一个点），pp.ua、nyc.mn、de及DigitalPlat特定域名除外（允许二级域名）
                 const dotCount = domain.split('.').length - 1;
                 const lowerDomain = domain.toLowerCase();
                 const isPpUa = lowerDomain.endsWith('.pp.ua');
+                const isNycMn = lowerDomain.endsWith('.nyc.mn');
+                const isDe = lowerDomain.endsWith('.de');
                 const isDigitalPlat = lowerDomain.endsWith('.qzz.io') || lowerDomain.endsWith('.dpdns.org') || lowerDomain.endsWith('.us.kg') || lowerDomain.endsWith('.xx.kg');
                 
-                if (dotCount !== 1 && !((isPpUa || isDigitalPlat) && dotCount === 2)) {
+                if (dotCount !== 1 && !((isPpUa || isDigitalPlat || isNycMn || isDe) && dotCount === 2)) {
                     if (dotCount === 0) {
                         showWhoisStatus('请输入完整的域名（如：example.com）', 'danger');
                     } else {
@@ -5300,13 +5302,15 @@ async function handleApiRequest(request) {
         return jsonResponse({ error: '域名格式不正确' }, 400);
       }
       
-      // 验证是否为一级域名（只能有一个点），pp.ua及DigitalPlat特定域名除外
+      // 验证是否为一级域名（只能有一个点），pp.ua、nyc.mn、de及DigitalPlat特定域名除外
       const dotCount = domain.split('.').length - 1;
       const lowerDomain = domain.toLowerCase();
       const isPpUa = lowerDomain.endsWith('.pp.ua');
+      const isNycMn = lowerDomain.endsWith('.nyc.mn');
+      const isDe = lowerDomain.endsWith('.de');
       const isDigitalPlat = lowerDomain.endsWith('.qzz.io') || lowerDomain.endsWith('.dpdns.org') || lowerDomain.endsWith('.us.kg') || lowerDomain.endsWith('.xx.kg');
       
-      if (dotCount !== 1 && !((isPpUa || isDigitalPlat) && dotCount === 2)) {
+      if (dotCount !== 1 && !((isPpUa || isDigitalPlat || isNycMn || isDe) && dotCount === 2)) {
         if (dotCount === 0) {
           return jsonResponse({ error: '请输入完整的域名（如：example.com）' }, 400);
         } else {
