@@ -249,6 +249,61 @@ async function queryDeWhois(domain) {
     
     // 如果WhoisJSON成功返回，即使信息有限，也返回结果
     if (result.success) {
+      // 尝试从原始数据中提取更多时间字段
+      // WhoisJSON API 可能在 raw 字段或其他字段中包含完整信息
+      const rawData = result.raw || {};
+      
+      // 辅助日期解析函数
+      const parseDate = (str) => {
+        if (!str) return null;
+        
+        // 优先尝试 DD.MM.YYYY 格式 (德国常用，避免被识别为 MM.DD.YYYY)
+        const germanMatch = str.match(/(\d{2})\.(\d{2})\.(\d{4})/);
+        if (germanMatch) {
+            return `${germanMatch[3]}-${germanMatch[2]}-${germanMatch[1]}`;
+        }
+
+        // 尝试标准日期解析
+        let date = new Date(str);
+        if (!isNaN(date.getTime())) return formatDate(str);
+        
+        return null;
+      };
+
+      // 如果标准字段为空，尝试查找其他常见字段名
+      if (!result.registrationDate) {
+        if (rawData.created_date) result.registrationDate = parseDate(rawData.created_date);
+        else if (rawData.creation_date) result.registrationDate = parseDate(rawData.creation_date);
+        else if (rawData.registered_date) result.registrationDate = parseDate(rawData.registered_date);
+      }
+
+      if (!result.expiryDate) {
+        if (rawData.expiration_date) result.expiryDate = parseDate(rawData.expiration_date);
+        else if (rawData.expiry_date) result.expiryDate = parseDate(rawData.expiry_date);
+        else if (rawData.expires_date) result.expiryDate = parseDate(rawData.expires_date);
+      }
+
+      // 如果仍未找到，尝试从 raw 文本中解析 (如果存在)
+      // 注意: result.raw 是 JSON 对象，我们需要检查其中是否有包含原始文本的字段
+      const rawText = typeof rawData.raw === 'string' ? rawData.raw : 
+                     (typeof rawData.whois_raw === 'string' ? rawData.whois_raw : 
+                     (typeof rawData.text === 'string' ? rawData.text : null));
+      
+      if (rawText) {
+         if (!result.registrationDate) {
+             const createdMatch = rawText.match(/(?:Created|Registration Date|Registered on|Creation Date):\s*(.+)/i);
+             if (createdMatch) result.registrationDate = parseDate(createdMatch[1].trim());
+         }
+         if (!result.expiryDate) {
+             const expiresMatch = rawText.match(/(?:Expires|Expiration Date|Expiry Date|Registry Expiry Date):\s*(.+)/i);
+             if (expiresMatch) result.expiryDate = parseDate(expiresMatch[1].trim());
+         }
+         if (!result.lastUpdated) {
+             const changedMatch = rawText.match(/(?:Changed|Last Updated|Updated Date|Last Modified):\s*(.+)/i);
+             if (changedMatch) result.lastUpdated = parseDate(changedMatch[1].trim());
+         }
+      }
+
       // 添加GDPR提示
       if (result.registered) {
         result.notice = '部分个人信息因GDPR合规性可能被隐藏';
