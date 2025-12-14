@@ -240,6 +240,40 @@ async function queryDigitalPlatWhois(domain) {
   }
 }
 
+// 德国域名(.de)专用WHOIS查询函数
+async function queryDeWhois(domain) {
+  try {
+    // 德国.de域名主要由DENIC管理，由于GDPR限制，许多信息被隐藏
+    // 尝试使用WhoisJSON API，如果失败则提供友好提示
+    const result = await queryDomainWhois(domain);
+    
+    // 如果WhoisJSON成功返回，即使信息有限，也返回结果
+    if (result.success) {
+      // 添加GDPR提示
+      if (result.registered) {
+        result.notice = '部分个人信息因GDPR合规性可能被隐藏';
+        result.registrar = result.registrar || 'DENIC eG';
+      }
+      return result;
+    }
+    
+    // 如果WhoisJSON失败，提供详细错误信息
+    return {
+      success: false,
+      error: '无法查询.de域名信息。这可能是由于以下原因：\n1. 域名未注册\n2. WHOIS服务器临时不可用\n3. GDPR限制导致信息不可访问\n\n建议稍后重试或联系域名注册商获取信息。',
+      domain: domain,
+      suggestion: '您可以尝试访问 https://www.denic.de/en/service/whois-service/ 进行手动查询'
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: '查询.de域名时发生错误: ' + error.message,
+      domain: domain,
+      suggestion: '请稍后重试或联系域名注册商'
+    };
+  }
+}
+
 
 // 检查KV是否已配置
 function isKVConfigured() {
@@ -5325,6 +5359,9 @@ async function handleApiRequest(request) {
       } else if (isDigitalPlat) {
         // 使用 DigitalPlat 接口查询特定二级域名
         result = await queryDigitalPlatWhois(domain);
+      } else if (isDe) {
+        // 使用专门的德国域名查询函数处理 .de 域名
+        result = await queryDeWhois(domain);
       } else {
         // 其他域名使用 WhoisJSON API
         result = await queryDomainWhois(domain);
